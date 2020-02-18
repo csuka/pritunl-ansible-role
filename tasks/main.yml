@@ -1,0 +1,95 @@
+---
+- name: pritunl | ensure data folder exists
+  file:
+    state: directory
+    path: "{{ pritunl_key_path }}"
+    mode: 0755
+    owner: root
+    group: root
+
+- name: pritunl | check if EPEL repo is already installed
+  stat:
+    path: "{{ epel_repofile_path }}"
+  register: epel_repofile_result
+
+- name: pritunl | install EPEL repo when required
+  yum:
+    name: "{{ epel_repo_url }}"
+    state: present
+  register: result
+  when: not epel_repofile_result.stat.exists
+
+- name: pritunl | import EPEL GPG key when required
+  rpm_key:
+    key: "{{ epel_repo_gpg_key_url }}"
+    state: present
+  when: not epel_repofile_result.stat.exists
+
+- name: pritunl | stat whether key is already imported
+  stat:
+    path: "{{ pritunl_dbpath }}/key"
+  register: key_file
+
+- name: pritunl | import key when required
+  shell: |
+    gpg --keyserver hkp://keyserver.ubuntu.com --recv-keys 7568D9BB55FF9E5287D586017AE645C0CF8E292A &&
+    gpg --armor --export 7568D9BB55FF9E5287D586017AE645C0CF8E292A > {{ pritunl_dbpath }}/key &&
+    sudo rpm --import {{ pritunl_dbpath }}/key
+  when: not key_file.stat.exists
+
+- name: pritunl | ensure repos are set
+  yum_repository:
+    name: "{{ item.key }}"
+    description: "{{ item.value.description }}"
+    file: "{{ item.key }}"
+    baseurl: "{{ item.value.baseurl }}"
+    enabled: "{{ item.value.enabled }}"
+    gpgkey: "{{ item.value.gpgkey | default() }}"
+    gpgcheck: "{{ item.value.gpgcheck }}"
+    includepkgs: "{{ item.value.includepkgs | default() }}"
+  with_dict: "{{ pritunl_yum_repositories }}"
+
+- name: pritunl | ensure pritunl has state {{ pritunl_state }}
+  yum:
+    name: pritunl
+    state: "{{ pritunl_state }}"
+
+- name: pritunl | place limits.conf file when enabled
+  template:
+    src: limits.conf.j2
+    dest:  /etc/security/limits.conf
+    mode: "0644"
+  when: pritunl_limits
+
+- name: pritunl | remove the executable bit from pritunl service
+  file:
+    path: /etc/systemd/system/pritunl.service
+    owner: root
+    group: root
+    mode: '0774'
+
+- name: pritunl | ensure pritunl is started and enabled
+  service:
+    name: pritunl
+    state: started
+    enabled: yes
+
+- name: pritunl | retrieve pritunl app values
+  shell: pritunl get app
+  register: pritunl_get_app
+
+- name: set server_port when required
+  shell: "pritunl {{ pritunl_server_port }}"
+  when: pritunl_server_port not in pritunl_get_app.stdout
+
+- name: set redirect_server when required
+  shell: "pritunl {{ pritunl_redirect_server }}"
+  when: pritunl_redirect_server not in pritunl_get_app.stdout
+
+- name: set reverse_proxy when required
+  shell: "pritunl {{ pritunl_reverse_proxy }}"
+  when: pritunl_reverse_proxy not in pritunl_get_app.stdout
+
+- name: set server_ssl when required
+  shell: "pritunl {{ pritunl_server_ssl }}"
+  when: pritunl_server_ssl not in pritunl_get_app.stdout

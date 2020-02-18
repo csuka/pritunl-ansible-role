@@ -1,0 +1,36 @@
+---
+pritunl_ansible_managed: "# Ansible managed, from the pritunl ansible role"
+
+epel_repo_url: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_distribution_major_version }}.noarch.rpm"
+epel_repo_gpg_key_url: "https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-{{ ansible_distribution_major_version }}"
+epel_repofile_path: "/etc/yum.repos.d/epel.repo"
+
+pritunl_state: installed
+pritunl_limits: True
+
+pritunl_yum_repositories:
+  pritunl:
+    name: pritunl
+    description: 'Pritunl Repository'
+    file: pritunl
+    baseurl: https://repo.pritunl.com/stable/yum/centos/7/
+    enabled: yes
+    gpgcheck: yes
+
+pritunl_dbpath: /var/lib/pritunl
+
+# https://docs.pritunl.com/docs/load-balancing
+pritunl_server_port: "app.server_port = 443"
+pritunl_redirect_server: "app.redirect_server = false"
+pritunl_reverse_proxy: "app.reverse_proxy = true"
+pritunl_server_ssl: "app.server_ssl = false"
+
+# config variables
+# not used anyway
+# pritunl_debug: false
+# pritunl_bind_addr: 0.0.0.0
+# pritunl_port: 443
+# pritunl_log_path: /var/log/pritunl.log
+# pritunl_tmp_path: "/tmp/pritunl_%r"
+# pritunl_local_address_interface: auto
+# pritunl_mongo_uri: "mongodb://[admin]:a_pass]localhost:27017/admin"
