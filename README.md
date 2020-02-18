@@ -90,5 +90,5 @@ Example playbook
     pritunl_reverse_proxy: "app.reverse_proxy = true"
     pritunl_server_ssl: "app.server_ssl = false"
   roles:
-    - pritunl
+    - pritunl-ansible-role
 ```
